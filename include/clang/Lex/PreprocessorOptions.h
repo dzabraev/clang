@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 namespace llvm {
   class MemoryBuffer;
@@ -197,6 +198,15 @@ public:
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = 0;
   }
+
+  std::map<std::pair<unsigned,unsigned>, std::string> includeMapping;
+  /// \brief create mapping for #include <foo>
+  /// where #include <foo> appears in parentId in line line
+  /// and <foo> will be expanded to file with targetID
+  void addInclMapping(unsigned parentId, unsigned line, std::string targetFilename) {
+    includeMapping[std::pair<unsigned, unsigned>(parentId, line)] = targetFilename;
+  }
+
 };
 
 } // end namespace clang

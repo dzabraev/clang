@@ -48,7 +48,7 @@
 #include <new>
 #include <string>
 #include <utility>
-
+#include <iostream>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -722,6 +722,27 @@ const FileEntry *Preprocessor::LookupFile(
     const DirectoryLookup *&CurDir, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath,
     ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped, bool SkipCache) {
+  unsigned presumedLineNum = SourceMgr.getPresumedLineNumber(FilenameLoc);
+  const FileEntry *prefetchedParentEntry = SourceMgr.getFileEntryForID(getCurrentFileLexer()->getFileID());
+  if (prefetchedParentEntry) {
+    unsigned parentId = prefetchedParentEntry->getUID();
+    auto search = PPOpts->includeMapping.find(std::pair<unsigned, unsigned>(parentId,presumedLineNum));
+    if(search != PPOpts->includeMapping.end()) {
+      return FileMgr.getFile(search->second);
+    }
+    else {
+      std::cout
+        <<SourceMgr.getFilename(FilenameLoc).str()
+        <<" "
+        <<SourceMgr.getSpellingLineNumber(FilenameLoc)<<"/"
+        <<SourceMgr.getExpansionLineNumber(FilenameLoc)<<"/"
+        <<SourceMgr.getPresumedLineNumber(FilenameLoc)
+        <<" can't fild prefetched include "
+        <<Filename.str()
+        <<std::endl;
+    }
+  }
+
   Module *RequestingModule = getModuleForLocation(FilenameLoc);
   bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
