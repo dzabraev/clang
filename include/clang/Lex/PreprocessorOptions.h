@@ -55,6 +55,8 @@ public:
   /// definitions and expansions.
   unsigned DetailedRecord : 1;
 
+  bool UseStandardPredefines;
+
   /// The implicit PCH included at the start of the translation unit, or empty.
   std::string ImplicitPCHInclude;
 
@@ -158,6 +160,7 @@ public:
 
 public:
   PreprocessorOptions() : UsePredefines(true), DetailedRecord(false),
+                          UseStandardPredefines(true),
                           DisablePCHValidation(false),
                           AllowPCHWithCompilerErrors(false),
                           DumpDeserializedPCHDecls(false),

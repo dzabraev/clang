@@ -1072,7 +1072,8 @@ void clang::InitializePreprocessor(
   // Even with predefines off, some macros are still predefined.
   // These should all be defined in the preprocessor according to the
   // current language configuration.
-  InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
+  if (InitOpts.UseStandardPredefines)
+    InitializeStandardPredefinedMacros(PP.getTargetInfo(), PP.getLangOpts(),
                                      FEOpts, Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
