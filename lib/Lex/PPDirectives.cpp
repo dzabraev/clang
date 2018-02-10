@@ -723,24 +723,55 @@ const FileEntry *Preprocessor::LookupFile(
     SmallVectorImpl<char> *RelativePath,
     ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped, bool SkipCache) {
   unsigned presumedLineNum = SourceMgr.getPresumedLineNumber(FilenameLoc);
-  const FileEntry *prefetchedParentEntry = SourceMgr.getFileEntryForID(getCurrentFileLexer()->getFileID());
-  if (prefetchedParentEntry) {
-    unsigned parentId = prefetchedParentEntry->getUID();
+  const FileEntry *thisFileEntry = SourceMgr.getFileEntryForID(getCurrentFileLexer()->getFileID());
+  if (thisFileEntry) {
+    unsigned parentId = thisFileEntry->getUID(); /*ID of this file*/
     auto search = PPOpts->includeMapping.find(std::pair<unsigned, unsigned>(parentId,presumedLineNum));
     if(search != PPOpts->includeMapping.end()) {
-      return FileMgr.getFile(search->second);
+      std::string inclFname = search->second; //abspath to header file
+      /* Collect header files for diagnostic purpose. If file will not be found
+       * in PPOpts->includeMapping, this might be in two reasons:
+       * 1. This file was included earlier in parentId-file. When debug info
+       * was generated second include might not have effect (#ifndef protect)
+       * in this case compiler won't produce DW_MACRO_start_file
+       * 2. DebugInfo or something else broken.
+       * If file not in PPOpts->includeMapping and wasn't include earlier,
+       * report about it.
+       * In case 1 we could return any file, because it will not be used any way
+      */
+      alreadyIncl[Filename] = inclFname;
+      return FileMgr.getFile(inclFname);
     }
     else {
-      std::cout
-        <<SourceMgr.getFilename(FilenameLoc).str()
-        <<" "
-        <<SourceMgr.getSpellingLineNumber(FilenameLoc)<<"/"
-        <<SourceMgr.getExpansionLineNumber(FilenameLoc)<<"/"
-        <<SourceMgr.getPresumedLineNumber(FilenameLoc)
-        <<" can't fild prefetched include "
-        <<Filename.str()
-        <<std::endl;
+        auto srhIncl = alreadyIncl.find(Filename) ;
+        if(srhIncl != alreadyIncl.end()) {
+          return FileMgr.getFile(srhIncl->second);
+        }
     }
+  }
+
+  if (Filename[0]=='/') {
+    return FileMgr.getFile(Filename);
+  }
+
+  for (std::string predefIncl: PPOpts->Includes) {
+    if (StringRef(predefIncl).endswith(Filename)) {
+      return FileMgr.getFile(predefIncl);
+    }
+  }
+
+  if (PPOpts->DisableHeaderLookup) {
+    unsigned DiagID = Diags->getCustomDiagID(DiagnosticsEngine::Warning,
+      "%0:%1/%2/%3 Can't find(from dwarf) header `%4`");
+
+    Diags->Report(DiagID)
+      << SourceMgr.getBufferName(FilenameLoc)
+      << SourceMgr.getSpellingLineNumber(FilenameLoc)
+      << SourceMgr.getPresumedLineNumber(FilenameLoc)
+      << SourceMgr.getExpansionLineNumber(FilenameLoc)
+      << Filename;
+
+    return nullptr;
   }
 
   Module *RequestingModule = getModuleForLocation(FilenameLoc);

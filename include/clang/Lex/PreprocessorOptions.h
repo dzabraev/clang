@@ -57,6 +57,8 @@ public:
 
   bool UseStandardPredefines;
 
+  bool DisableHeaderLookup;
+
   /// The implicit PCH included at the start of the translation unit, or empty.
   std::string ImplicitPCHInclude;
 
@@ -161,6 +163,7 @@ public:
 public:
   PreprocessorOptions() : UsePredefines(true), DetailedRecord(false),
                           UseStandardPredefines(true),
+                          DisableHeaderLookup(false),
                           DisablePCHValidation(false),
                           AllowPCHWithCompilerErrors(false),
                           DumpDeserializedPCHDecls(false),

@@ -283,6 +283,10 @@ class Preprocessor {
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
 
+  /// mapping foo --> abspath
+  /// where foo from #include <foo>
+  std::map<std::string, std::string> alreadyIncl;
+
   class PreambleConditionalStackStore {
     enum State {
       Off = 0,
